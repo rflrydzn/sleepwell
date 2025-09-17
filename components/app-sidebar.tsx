@@ -33,125 +33,48 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: IconDashboard,
-    },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      icon: IconCalendarWeek,
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
-};
+import { MoonStar } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { currentUser } = useAuth();
+  const data = {
+    user: {
+      name: "user",
+      email: currentUser.email,
+      avatar: "",
+    },
+
+    navSecondary: [
+      {
+        title: "Settings",
+        url: "#",
+        icon: IconSettings,
+      },
+      {
+        title: "Get Help",
+        url: "#",
+        icon: IconHelp,
+      },
+      {
+        title: "Search",
+        url: "#",
+        icon: IconSearch,
+      },
+    ],
+    documents: [
+      {
+        name: "Dashboard",
+        url: "/dashboard",
+        icon: IconDashboard,
+      },
+      {
+        name: "Schedule",
+        url: "/schedule",
+        icon: IconCalendarWeek,
+      },
+    ],
+  };
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -162,15 +85,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <MoonStar className="!size-5" />
+                <span className="text-base font-semibold">Sleepwell</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
         <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>

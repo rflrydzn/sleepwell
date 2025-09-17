@@ -1,17 +1,46 @@
+"use client";
 import { GalleryVerticalEnd } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { doSignInWithEmailAndPassword } from "@/lib/firebase/auth";
+import { useAuth } from "@/app/context/AuthContext";
+import { MoonStar } from "lucide-react";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { userLoggedIn, loading } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && userLoggedIn) {
+      router.push("/dashboard");
+    }
+  }, [userLoggedIn, loading, router]);
+
+  if (loading) return <div>Loading...</div>;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    console.log("submitted", email);
+    e.preventDefault();
+    try {
+      await doSignInWithEmailAndPassword(email, password);
+      router.push("/dashboard"); // redirect on success
+    } catch (err) {
+      console.error(err);
+    }
+  };
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form>
+      <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2">
             <a
@@ -19,14 +48,13 @@ export function LoginForm({
               className="flex flex-col items-center gap-2 font-medium"
             >
               <div className="flex size-8 items-center justify-center rounded-md">
-                <GalleryVerticalEnd className="size-6" />
+                <MoonStar className="size-6" />
               </div>
-              <span className="sr-only">Acme Inc.</span>
             </a>
-            <h1 className="text-xl font-bold">Welcome to Acme Inc.</h1>
+            <h1 className="text-xl font-bold">Sleepwell</h1>
             <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
-              <a href="#" className="underline underline-offset-4">
+              <a href="/signup" className="underline underline-offset-4">
                 Sign up
               </a>
             </div>
@@ -38,6 +66,18 @@ export function LoginForm({
                 id="email"
                 type="email"
                 placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-3">
+              <Label htmlFor="email">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>

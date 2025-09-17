@@ -24,6 +24,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { doSignOut } from "@/lib/firebase/auth";
 
 export function NavUser({
   user,
@@ -35,6 +36,16 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const handleLogout = async () => {
+    try {
+      doSignOut();
+      console.log("User signed out");
+      // Optionally redirect
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -80,21 +91,21 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled>
                 <IconCreditCard />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled>
                 <IconNotification />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <IconLogout />
               Log out
             </DropdownMenuItem>
