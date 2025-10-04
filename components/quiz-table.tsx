@@ -28,32 +28,44 @@ import {
 import Image from "next/image";
 import { Trash } from "lucide-react";
 
-type Quiz = { id: string; subject: string; lesson: string; subjectId: string };
+// ✅ Type Definitions
+type Quiz = {
+  id: string;
+  subject: string;
+  lesson: string;
+  subjectId: string;
+  day?: string;
+};
+
 type SubjectData = {
   subject: string;
+  day: string; // e.g. "MWF"
+  time: string; // e.g. "08:00–09:00"
 };
 
 type QuizData = {
   subject: string;
   lesson: string;
-};
-type QuizzesBySubject = Record<string, Record<string, QuizData>>;
-// Add this type definition
-type FirebaseQuizData = {
-  subject: string;
-  lesson: string;
   createdAt: string;
+  day?: string;
 };
 
-type FirebaseQuizzesData = Record<string, FirebaseQuizData>;
+type FirebaseQuizzesData = Record<string, QuizData>;
+
+// 🕐 Helper: Parse "08:00–09:00"
+function parseTimeRange(timeRange: string) {
+  const [start, end] = timeRange.split("–").map((t) => t.trim());
+  return { start, end };
+}
 
 export function QuizTable() {
   const { currentUser } = useAuth();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [subjects, setSubjects] = useState<{ id: string; subject: string }[]>(
-    []
-  );
+  const [subjects, setSubjects] = useState<
+    { id: string; subject: string; day: string; time: string }[]
+  >([]);
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
   const [lesson, setLesson] = useState("");
 
   // 🟢 Load subjects
@@ -66,6 +78,8 @@ export function QuizTable() {
         ([id, value]) => ({
           id,
           subject: value.subject,
+          day: value.day,
+          time: value.time,
         })
       );
       setSubjects(subs);
@@ -81,9 +95,7 @@ export function QuizTable() {
       const data = snap.val() || {};
       const list: Quiz[] = [];
 
-      // Type assert the entire data object
       const typedData = data as Record<string, FirebaseQuizzesData>;
-
       Object.entries(typedData).forEach(([subjectId, quizzes]) => {
         Object.entries(quizzes).forEach(([id, value]) => {
           list.push({
@@ -91,6 +103,7 @@ export function QuizTable() {
             subjectId,
             subject: value.subject,
             lesson: value.lesson,
+            day: value.day,
           });
         });
       });
@@ -101,7 +114,7 @@ export function QuizTable() {
 
   // ➕ Add quiz
   const handleAddQuiz = async () => {
-    if (!selectedSubject || !lesson.trim()) return;
+    if (!selectedSubject || !lesson.trim() || !selectedDay) return;
     const subj = subjects.find((s) => s.id === selectedSubject);
     if (!subj) return;
 
@@ -111,11 +124,13 @@ export function QuizTable() {
     await set(quizRef, {
       subject: subj.subject,
       lesson,
+      day: selectedDay,
       createdAt: new Date().toISOString(),
     });
 
     setLesson("");
     setSelectedSubject("");
+    setSelectedDay("");
   };
 
   // ❌ Delete quiz
@@ -126,13 +141,48 @@ export function QuizTable() {
     );
   };
 
+  // 🕓 Auto delete quizzes if time passed
+  useEffect(() => {
+    if (!currentUser || subjects.length === 0 || quizzes.length === 0) return;
+
+    const now = new Date();
+    const days = ["Su", "M", "Tu", "W", "Th", "F", "Sa"];
+    const currentDay = days[now.getDay()];
+
+    quizzes.forEach((quiz) => {
+      const subj = subjects.find((s) => s.id === quiz.subjectId);
+      if (!subj || !subj.time) return;
+
+      // Only check if quiz day matches today's day
+      if (quiz.day !== currentDay) return;
+
+      const { end } = parseTimeRange(subj.time);
+      const [endHour, endMinute] = end.split(":").map(Number);
+      const endTime = new Date();
+      endTime.setHours(endHour, endMinute, 0, 0);
+
+      if (now > endTime) {
+        remove(
+          ref(
+            db,
+            `users/${currentUser.uid}/quizzes/${quiz.subjectId}/${quiz.id}`
+          )
+        );
+      }
+    });
+  }, [quizzes, subjects, currentUser]);
+
+  const dayOptions = ["M", "Tu", "W", "Th", "F", "Sa", "Su"];
+
   return (
     <div>
+      {/* Header Section */}
       <div className="flex justify-between items-center mb-4">
         <Label className="scroll-m-20 text-2xl font-semibold tracking-tight">
           Upcoming Quizzes
         </Label>
         <div className="flex gap-2">
+          {/* Select Subject */}
           <Select value={selectedSubject} onValueChange={setSelectedSubject}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Select subject" />
@@ -145,6 +195,22 @@ export function QuizTable() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Select Day */}
+          <Select value={selectedDay} onValueChange={setSelectedDay}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Select day" />
+            </SelectTrigger>
+            <SelectContent>
+              {dayOptions.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Lesson Input */}
           <Input
             placeholder="Lesson"
             value={lesson}
@@ -155,6 +221,7 @@ export function QuizTable() {
         </div>
       </div>
 
+      {/* Quiz List */}
       {quizzes.length === 0 ? (
         <div className="flex flex-col justify-center items-center min-h-[200px] py-8">
           <Image src={NoQuiz} alt="No upcoming quiz" width="200" />
@@ -167,6 +234,7 @@ export function QuizTable() {
             <TableRow>
               <TableHead>Subject</TableHead>
               <TableHead>Lesson</TableHead>
+              <TableHead>Day</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -175,6 +243,7 @@ export function QuizTable() {
               <TableRow key={quiz.id}>
                 <TableCell>{quiz.subject}</TableCell>
                 <TableCell>{quiz.lesson}</TableCell>
+                <TableCell>{quiz.day}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="destructive"
